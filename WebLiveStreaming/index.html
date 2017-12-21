@@ -1,0 +1,98 @@
+<html>
+<meta charset="utf-8">
+    <style>
+        html, body { height:100%; overflow:hidden; }
+        body { margin:0; }
+        #snapshot { position: absolute; top: 0px; left: 0px; }
+    </style>
+<body>
+<script src="jquery.min.js"></script>
+<script src="three.min.js"></script>
+<script src="OrbitControls.js"></script>
+<script>
+
+$(init);
+
+function init() {
+    scene = new THREE.Scene();
+  
+    var width = $(window).width();
+    var height = $(window).height();
+
+    // Camera
+    camera = new THREE.PerspectiveCamera( 60, width / height);
+    camera.position.x = 0;
+    camera.position.y = 0;
+    camera.position.z = 14;
+    scene.add( camera );
+ 
+    // Renderer
+    renderer = new THREE.WebGLRenderer();
+
+    // Background
+    navigator.getMedia = ( navigator.getUserMedia ||
+                       navigator.webkitGetUserMedia ||
+                       navigator.mozGetUserMedia ||
+                       navigator.msGetUserMedia);
+    var is_ff = navigator.mozGetUserMedia;
+    video = document.createElement('video');
+    var camera_height = 1080;
+    var camera_width = 1920;
+    navigator.getMedia( {"video": is_ff ? { height: { ideal: camera_height } } : {mandatory: { minWidth: camera_width, maxWidth: camera_width, minHeight: camera_height, maxHeight: camera_height }}, "audio":true}, function(stream){
+
+      video.src = URL.createObjectURL(stream);
+      window.localStream = stream;
+      video.play();
+      videoImage = document.createElement('canvas');
+      videoImage.width = camera_width;
+      videoImage.height = camera_height;
+      videoImageContext = videoImage.getContext('2d');
+      videoImageContext.fillStyle = '#000000';
+      tex = new THREE.Texture(videoImage);
+      tex.minFilter = tex.magFilter = THREE.LinearFilter;
+
+      sphereGeometry = new THREE.SphereGeometry( 16, 60, 60);
+      var matrix = new THREE.Matrix4().makeScale(1, 1, -1);
+      sphereGeometry.applyMatrix(matrix);
+      var sphereRotationY = new THREE.Matrix4().makeRotationY(90 * Math.PI/180.0);
+      sphereGeometry.applyMatrix(sphereRotationY);
+      mesh = new THREE.Mesh(sphereGeometry , new THREE.MeshBasicMaterial( { map: tex, overdraw: true} ) );
+      scene.add( mesh );
+
+      animate();
+
+    }, function(error) {
+      console.log("The following error occured: " + error);
+    });
+
+    var aspect = width/height;
+    var renderer_height = height;
+    renderer.setSize( renderer_height*aspect, renderer_height );
+    var renderer_element = renderer.domElement;
+    renderer_element.style.width = width + "px";
+    renderer_element.style.height = height + "px";
+    document.body.appendChild( renderer.domElement );
+  
+    // Mouse Controller
+    control = new THREE.OrbitControls( camera, renderer.domElement );
+    control.noPan = true;
+    control.rotateSpeed = -1.0;
+
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    renderer.clear();
+    renderer.render( scene, camera );
+    if (video.readyState === video.HAVE_ENOUGH_DATA)  {
+        video.play();
+        videoImageContext.drawImage(video, 0, 0);
+        tex.needsUpdate = true;
+    }
+
+    control.update();
+}
+</script>
+
+</body>
+</html>
